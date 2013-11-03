@@ -46,6 +46,12 @@ function handleClientRequests(data, sock) {
         videos[sock.id] = (data + ' ').match(/(\w+\.mjpeg)/)[1];
         RTPPorts[sock.id] = (data + ' ').match(/client_port= (\d+)/)[1];
     }
+    else if (/^KEYEXCHANGE/.test(data)) {
+        var clientSecret = (data + ' ').match(/KEYEXCHANGE:([0-9]*)KEYEND/)[1];
+        sock.write('BALLS');
+
+        return;
+    }
     else if (/^PLAY/.test(data)) {
 		// form a response
         seq = (data + ' ').match(/CSeq:\s(\d+)/)[1];
