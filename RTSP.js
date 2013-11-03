@@ -1,5 +1,6 @@
 var videoReader = require('./MJPEGVideo'),
-    rtp = require('./RTP');
+    rtp = require('./RTP'),
+    crypto = require('crypto');
 
 var timerInterval = 60;
 
@@ -46,9 +47,24 @@ function handleClientRequests(data, sock) {
         videos[sock.id] = (data + ' ').match(/(\w+\.mjpeg)/)[1];
         RTPPorts[sock.id] = (data + ' ').match(/client_port= (\d+)/)[1];
     }
+    //Handles the key exchange via Diffie-Hellman
     else if (/^KEYEXCHANGE/.test(data)) {
-        var clientSecret = (data + ' ').match(/KEYEXCHANGE:([0-9]*)KEYEND/)[1];
-        sock.write('BALLS');
+        var clientSecret = (data + ' ').match(/KEYEXCHANGE:(.*)KEYEND/)[1];
+        console.log("\nClient secret: " + clientSecret);
+
+        //Use node.js crypto library to create a DiffieHellman class with generator value '2' (default) and use supplied prime
+        var diffieHellman = crypto.createDiffieHellman('00e53a3f72c435febe5809c84337575a3e06a60e171f83d500014bcb4c78b1188dd99e9841e96e032ef47e6ae4ca7fa8a5b9cba362ca537c301a1b59fb3eb42c47056fdecb3b0fabcbb49414365bf0367ab8669904ff44762a97e875594865d1fb', ['hex']);
+        diffieHellman.generateKeys();
+
+        //Create the serverSecret and send to the client
+        var serverSecret = diffieHellman.getPublicKey(['hex']);
+        console.log("\nServer secret: " + serverSecret);
+        sock.write(serverSecret);
+
+        //Take the clientSecret and compute the sharedSecret (the key)
+        var sharedSecret = diffieHellman.computeSecret(clientSecret, ['hex'], ['hex']);
+        console.log("\nShared secret: " + sharedSecret);
+        keys[sock.id] = sharedSecret;
 
         return;
     }
