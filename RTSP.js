@@ -58,39 +58,38 @@ function handleClientRequests(data, sock) {
 
         //Use node.js crypto library to create a DiffieHellman class with generator value '2' (default) and use supplied prime
         var diffieHellman = crypto.createDiffieHellman('00e53a3f72c435febe5809c84337575a3e06a60e171f83d500014bcb4c78b1188dd99e9841e96e032ef47e6ae4ca7fa8a5b9cba362ca537c301a1b59fb3eb42c47056fdecb3b0fabcbb49414365bf0367ab8669904ff44762a97e875594865d1fb', ['hex']);
-
-        //Create the serverSecret and send to the client
-        var serverSecret = diffieHellman.generateKeys(['hex'])
-        console.log("\nServer secret: " + serverSecret);
-        sock.write(serverSecret);
+        diffieHellman.generateKeys('hex');
 
         //Take the clientSecret and compute the sharedSecret (the key)
         try {
-        var sharedSecret = diffieHellman.computeSecret(clientSecret, 'hex', 'hex');
-        console.log("\nShared secret: " + sharedSecret);
-        var sharedSecretBuffer = new Buffer(96);
-        sharedSecretBuffer.write(sharedSecret, 'hex');
+        var sharedSecret = diffieHellman.computeSecret(clientSecret, 'hex');
+        }
+        catch(ex) {
+            console.log("\nError generating keys. Retrying...\n");
+            console.log(ex);
+            //Send message to client to retry key exchange
+            sock.write("RETRYKEYEXCHANGE");
+            return;
+        }
+        console.log("\nKeys exchanged successfully.\n");
+
+        //Create the serverSecret and send to the client
+        var serverSecret = diffieHellman.getPublicKey('hex');
+        console.log("\nServer secret: " + serverSecret);
+        sock.write(serverSecret);
 
         //Divide the shared secret into the symmetric key, IV, MAC key, and MAC IV
         keys[sock.id] = new Buffer(32);
         iv[sock.id] = new Buffer(16);
         macKeys[sock.id] = new Buffer(32);
         macIv[sock.id] = new Buffer(16);
-
-        sharedSecretBuffer.copy(keys[sock.id], 0, 0, 32);
-        sharedSecretBuffer.copy(iv[sock.id], 0, 32, 48);
-        sharedSecretBuffer.copy(macKeys[sock.id], 0, 48, 80);
-        sharedSecretBuffer.copy(macIv[sock.id], 0, 80, 96);
-
+        sharedSecret.copy(keys[sock.id], 0, 0, 32);
+        sharedSecret.copy(iv[sock.id], 0, 32, 48);
+        sharedSecret.copy(macKeys[sock.id], 0, 48, 80);
+        sharedSecret.copy(macIv[sock.id], 0, 80, 96);
         //Create a cipher using AES-256-CBC
         var cipher = crypto.createCipheriv('aes-256-cbc', keys[sock.id], iv[sock.id]);
         this.cipher[sock.id] = cipher;
-        }
-        catch(ex) {
-            console.log("\nError generating keys.\n");
-            console.log(ex);
-        }
-
 
         return;
     }
@@ -183,7 +182,8 @@ function Server_Time_Handler(sock) {
         rtp.MediaType = 26;
         rtp.FrameNo = videoFrameNo[sock.id];
         rtp.TimeStamp = videoFrameNo[sock.id] * timerInterval;
-        rtp.Payload = cipher[sock.id].update(nextFrame.f, [binary], [binary]);
+        //Encrypt the payload of the RTP packet
+        rtp.Payload = cipher[sock.id].update(nextFrame.f, 'binary', 'hex');
         rtp.PayloadLength = image_length;
         rtp.init('127.0.0.1', 0);
         //send the packet as a DatagramPacket over the UDP socket 
