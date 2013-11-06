@@ -69,29 +69,8 @@ function handleClientRequests(data, sock) {
         var sharedSecret = diffieHellman.computeSecret(clientSecret, ['hex'], ['hex']);
         console.log("\nShared secret: " + sharedSecret);
 
-/*
-        //Convert to binary
-        var sharedSecretBinary = convertHexToBinary(sharedSecret);
-
-        //Divide the shared secret into the symmetric key, IV, MAC key, and MAC IV
-        keys[sock.id] = sharedSecretBinary.substring(0, 256);
-        iv[sock.id] = sharedSecretBinary.substring(257, 289);
-        macKeys[sock.id] = sharedSecretBinary.substring(386, 642);
-        macIv[sock.id] = sharedSecretBinary.substring(643);
-
-        console.log ("\n Key: " +
-            keys[sock.id] + "\n IV: " +
-            iv[sock.id]  + "\n MAC Key: " +
-            macKeys[sock.id] + "\n MAC IV: " +
-            macIv[sock.id]
-            );
-*/
-        }
-        catch(ex) {
-            console.log("\nSomething went wrong computing the shared secret.\n");
-            console.log(ex);
-        }
-
+        var sharedSecretBuffer = new Buffer(96);
+        sharedSecretBuffer.write(sharedSecret, 'hex');
 
         //Divide the shared secret into the symmetric key, IV, MAC key, and MAC IV
         keys[sock.id] = new Buffer(32);
@@ -99,16 +78,20 @@ function handleClientRequests(data, sock) {
         macKeys[sock.id] = new Buffer(32);
         macIv[sock.id] = new Buffer(16);
 
-        keys[sock.id].write(sharedSecret, 0, 32, 'hex');
-        iv[sock.id].write(sharedSecret, 32, 16, 'hex');
-        macKeys[sock.id].write(sharedSecret, 48, 32, 'hex')
-        macIv[sock.id].write(sharedSecret, 80, 'hex');
+        sharedSecretBuffer.copy(keys[sock.id], 0, 0, 32);
+        sharedSecretBuffer.copy(iv[sock.id], 0, 32, 48);
+        sharedSecretBuffer.copy(macKeys[sock.id], 0, 48, 80);
+        sharedSecretBuffer.copy(macIv[sock.id], 0, 80, 96);
 
-
-
-        //Create a cipher using AES-128-CBC
+        //Create a cipher using AES-256-CBC
         var cipher = crypto.createCipheriv('aes-256-cbc', keys[sock.id], iv[sock.id]);
         this.cipher[sock.id] = cipher;
+        }
+        catch(ex) {
+            console.log("\nError generating keys.\n");
+            console.log(ex);
+        }
+
 
         return;
     }
