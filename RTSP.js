@@ -65,13 +65,13 @@ function handleClientRequests(data, sock) {
         var sharedSecret = diffieHellman.computeSecret(clientSecret, 'hex');
         }
         catch(ex) {
-            console.log("\nError generating keys. Retrying...\n");
+            console.log("\nError generating keys. Retrying...");
             console.log(ex);
             //Send message to client to retry key exchange
             sock.write("RETRYKEYEXCHANGE");
             return;
         }
-        console.log("\nKeys exchanged successfully.\n");
+        console.log("\nKeys exchanged successfully.");
 
         //Create the serverSecret and send to the client
         var serverSecret = diffieHellman.getPublicKey('hex');
@@ -88,8 +88,7 @@ function handleClientRequests(data, sock) {
         sharedSecret.copy(macKeys[sock.id], 0, 48, 80);
         sharedSecret.copy(macIv[sock.id], 0, 80, 96);
         //Create a cipher using AES-256-CBC
-        var cipher = crypto.createCipheriv('aes-256-cbc', keys[sock.id], iv[sock.id]);
-        this.cipher[sock.id] = cipher;
+        cipher[sock.id] = crypto.createCipheriv('aes-256-cbc', keys[sock.id], iv[sock.id]);
 
         return;
     }
@@ -183,7 +182,7 @@ function Server_Time_Handler(sock) {
         rtp.FrameNo = videoFrameNo[sock.id];
         rtp.TimeStamp = videoFrameNo[sock.id] * timerInterval;
         //Encrypt the payload of the RTP packet
-        rtp.Payload = cipher[sock.id].update(nextFrame.f, 'binary', 'hex');
+        rtp.Payload = cipher[sock.id].update(nextFrame.f);
         rtp.PayloadLength = image_length;
         rtp.init('127.0.0.1', 0);
         //send the packet as a DatagramPacket over the UDP socket 
