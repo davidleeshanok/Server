@@ -66,9 +66,8 @@ function handleClientRequests(data, sock) {
 
         //Take the clientSecret and compute the sharedSecret (the key)
         try {
-        var sharedSecret = diffieHellman.computeSecret(clientSecret, ['hex'], ['hex']);
+        var sharedSecret = diffieHellman.computeSecret(clientSecret, 'hex', 'hex');
         console.log("\nShared secret: " + sharedSecret);
-
         var sharedSecretBuffer = new Buffer(96);
         sharedSecretBuffer.write(sharedSecret, 'hex');
 
@@ -206,63 +205,4 @@ function Server_Time_Handler(sock) {
     }
 
 
-}
-
-
-function convertHexToBinary(hex) {
-    var binary = [];
-
-    for (var i = 0; i < hex.length; i++) {
-
-        if(hex[i] == 0) {
-            binary.push("0000")
-        }
-        else if(hex[i] == 1) {
-            binary.push("0001");
-        }
-        else if(hex[i] == 2) {
-            binary.push("0010");
-        }
-        else if(hex[i] == 3) {
-            binary.push("0011");
-        }
-        else if(hex[i] == 4) {
-            binary.push("0100");
-        }
-        else if(hex[i] == 5) {
-            binary.push("0101");
-        }
-        else if(hex[i] == 6) {
-            binary.push("0110");
-        }
-        else if(hex[i] == 7) {
-            binary.push("0111");
-        }
-        else if(hex[i] == 8) {
-            binary.push("1000");
-        }
-        else if(hex[i] == 9) {
-            binary.push("1001");
-        }
-        else if(hex[i] === "a") {
-            binary.push("1010");
-        }
-        else if(hex[i] === "b") {
-            binary.push("1011");
-        }
-        else if(hex[i] === "c") {
-            binary.push("1100");
-        }
-        else if(hex[i] === "d") {
-            binary.push("1101");
-        }
-        else if(hex[i] === "e") {
-            binary.push("1110");
-        }
-        else if(hex[i] === "f") {
-            binary.push("1111");
-        }
-    };
-    //Join array and remove leading 0s
-    return binary.join('').match(/1[0,1]*/).toString();
 }
