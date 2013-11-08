@@ -184,12 +184,13 @@ function Server_Time_Handler(sock) {
         cipher = crypto.createCipheriv('aes-256-cbc', keys[sock.id], iv[sock.id]);
         cipher.setAutoPadding(true);
 
-        //var temp = new Buffer(nextFrame.f, 'ascii');
-        var buf = cipher.update(nextFrame.f, 'ascii', 'hex');
-        buf += cipher.final('hex');
-        var payloadBuffer = new Buffer(62000);
-        payloadBuffer.write(buf, 0, buf.length, 'hex');
+        var temp = new Buffer(62000);
+        nextFrame.f.copy(temp);
 
+        var buf = cipher.update(temp, undefined, 'hex');
+        buf += cipher.final('hex');
+
+        var payloadBuffer = new Buffer(buf, 'hex');
         console.log(payloadBuffer.length);
 
         rtp.Payload = payloadBuffer;
