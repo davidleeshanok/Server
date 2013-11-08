@@ -8,9 +8,8 @@ var sessionNumber = Math.floor(1000 * Math.random()); /* any random number */
 var nickNames = {},
 keys = {},
 iv = {},
-macKeys = {};
-macIv = {};
-cipher = {},
+macKeys = {},
+macIv = {},
 sessions = {},
 videos = {},
 RTPPorts = {},
@@ -87,8 +86,6 @@ function handleClientRequests(data, sock) {
         sharedSecret.copy(iv[sock.id], 0, 32, 48);
         sharedSecret.copy(macKeys[sock.id], 0, 48, 80);
         sharedSecret.copy(macIv[sock.id], 0, 80, 96);
-        //Create a cipher using AES-256-CBC
-        cipher[sock.id] = crypto.createCipheriv('aes-256-cbc', keys[sock.id], iv[sock.id]);
 
         return;
     }
@@ -181,13 +178,25 @@ function Server_Time_Handler(sock) {
         rtp.MediaType = 26;
         rtp.FrameNo = videoFrameNo[sock.id];
         rtp.TimeStamp = videoFrameNo[sock.id] * timerInterval;
+
         //Encrypt the payload of the RTP packet
-        rtp.Payload = cipher[sock.id].update(nextFrame.f);
-        rtp.PayloadLength = image_length;
+        //Create a cipher using AES-256-CBC
+        cipher = crypto.createCipheriv('aes-256-cbc', keys[sock.id], iv[sock.id]);
+        cipher.setAutoPadding(true);
+
+        //var temp = new Buffer(nextFrame.f, 'ascii');
+        var buf = cipher.update(nextFrame.f, 'ascii', 'hex');
+        buf += cipher.final('hex');
+        var payloadBuffer = new Buffer(62000);
+        payloadBuffer.write(buf, 0, buf.length, 'hex');
+
+        console.log(payloadBuffer.length);
+
+        rtp.Payload = payloadBuffer;
+        rtp.PayloadLength = payloadBuffer.length;
         rtp.init('127.0.0.1', 0);
         //send the packet as a DatagramPacket over the UDP socket 
         rtp.SendRTPPacketTo(clientIP[sock.id], RTPPorts[sock.id]);
-
     }
     else {
         //  StopTimer();
