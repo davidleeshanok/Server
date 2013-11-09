@@ -1,5 +1,6 @@
 //size of the RTP header:
 var HEADER_SIZE = 12;
+var HMAC_SIZE = 16;
 
 //Fields that compose the RTP header
 var Version,
@@ -16,6 +17,7 @@ module.exports = {
     header: '', //Bitstream of the RTP header
     payloadSize: 0, //size of the RTP payload
     payload: '', //Bitstream of the RTP payload
+    hmac: '',
 
     init: function(PType, FrameNum, Time, data, data_length) {
         //fill by default header fields:
@@ -61,7 +63,7 @@ module.exports = {
     //getlength: return the total length of the RTP packet
     //--------------------------
     getlength: function() {
-        return (this.payload_size + HEADER_SIZE);
+        return (this.payload_size + HEADER_SIZE + HMAC_SIZE);
     },
 
     //--------------------------
@@ -76,5 +78,23 @@ module.exports = {
         packet[Pi + HEADER_SIZE] = this.payload[Pi];
 
         return packet;
+    },
+
+    gethmacpacket: function() {
+        console.log("HMAC LEGNTH:" + this.hmac.length);
+        var hmacPacket = new Buffer(this.payload_size + HEADER_SIZE + HMAC_SIZE);
+
+        for (var Hi = 0; Hi < HEADER_SIZE; Hi++)
+            hmacPacket[Hi] = this.header[Hi];
+        for (var Pi = 0; Pi < this.payload_size; Pi++)
+            hmacPacket[Pi + HEADER_SIZE] = this.payload[Pi];
+        for (var Mi = 0; Mi < HMAC_SIZE; Mi++)
+            hmacPacket[Mi + HEADER_SIZE + this.payload_size] = this.hmac[Mi];
+
+        return hmacPacket;
+    },
+
+    sethmac: function(hmac) {
+        this.hmac = hmac;
     }
 };

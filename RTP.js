@@ -21,9 +21,14 @@
          this.rtp_packet.init(this.MediaType, this.FrameNo, this.TimeStamp, this.Payload, this.PayloadLength);
      },
 
+     CreateHMAC: function(hmac) {
+        hmac.write(this.rtp_packet.getpacket());
+        this.rtp_packet.sethmac(hmac.digest());
+     },
+
      //Build and send the packet as a DatagramPacket over the UDP socket 
      SendRTPPacketTo: function(clientIP, clientPort) {
-         this.RTPsocket.send(this.rtp_packet.getpacket(), 0, this.rtp_packet.getlength(), clientPort, clientIP);
+         this.RTPsocket.send(this.rtp_packet.gethmacpacket(), 0, this.rtp_packet.getlength(), clientPort, clientIP);
      },
 
      close: function() {

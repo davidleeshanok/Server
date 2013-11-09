@@ -10,6 +10,7 @@ keys = {},
 iv = {},
 macKeys = {},
 macIv = {},
+sequence = {},
 sessions = {},
 videos = {},
 RTPPorts = {},
@@ -41,6 +42,16 @@ module.exports = {
 function handleClientRequests(data, sock) {
     var response = 'RTSP/1.0 200 OK\n';
     var seq;
+
+    if(/CSeq:\s(\d+)/.test(data)) {
+        seq = (data + ' ').match(/CSeq:\s(\d+)/)[1];
+    }
+    //prevent replay attacks. if new seq is less than or equal old seq then the message has been sent before
+    if(sequence[sock.id] >= seq)
+        return;
+    else 
+        sequence[sock.id] = seq;
+
     console.log('\n' + nickNames[sock.id] + ' requests: \n' + data);
     if (/^SETUP/.test(data)) {
 		// form a response
@@ -183,19 +194,20 @@ function Server_Time_Handler(sock) {
         //Create a cipher using AES-256-CBC
         cipher = crypto.createCipheriv('aes-256-cbc', keys[sock.id], iv[sock.id]);
         cipher.setAutoPadding(true);
-
         var temp = new Buffer(62000);
         nextFrame.f.copy(temp);
-
         var buf = cipher.update(temp, undefined, 'hex');
         buf += cipher.final('hex');
-
         var payloadBuffer = new Buffer(buf, 'hex');
-        console.log(payloadBuffer.length);
 
         rtp.Payload = payloadBuffer;
         rtp.PayloadLength = payloadBuffer.length;
         rtp.init('127.0.0.1', 0);
+
+        //Create Hmac and append to packet
+        var hmac = crypto.createHmac('md5', macKeys[sock.id]);
+        rtp.CreateHMAC(hmac);
+
         //send the packet as a DatagramPacket over the UDP socket 
         rtp.SendRTPPacketTo(clientIP[sock.id], RTPPorts[sock.id]);
     }
