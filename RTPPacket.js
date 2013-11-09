@@ -81,7 +81,6 @@ module.exports = {
     },
 
     gethmacpacket: function() {
-        console.log("HMAC LEGNTH:" + this.hmac.length);
         var hmacPacket = new Buffer(this.payload_size + HEADER_SIZE + HMAC_SIZE);
 
         for (var Hi = 0; Hi < HEADER_SIZE; Hi++)

@@ -46,7 +46,8 @@ function handleClientRequests(data, sock) {
     if(/CSeq:\s(\d+)/.test(data)) {
         seq = (data + ' ').match(/CSeq:\s(\d+)/)[1];
     }
-    //prevent replay attacks. if new seq is less than or equal old seq then the message has been sent before
+    //prevent replay attacks. 
+    //if new seq is less than or equal old seq then the message has been sent before
     if(sequence[sock.id] >= seq)
         return;
     else 
